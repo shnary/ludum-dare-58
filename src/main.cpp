@@ -1,49 +1,47 @@
 #include <iostream>
 #include <raylib.h>
 
+const int SCREEN_WIDTH = 800;
+const int SCREEN_HEIGHT = 600;
+
 int main() {
 
-    InitWindow(800, 600, "Ludum Dare 58");
-    Model model = LoadModel("../assets/char.obj");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Ludum Dare 58");
+    SetTargetFPS(60);
 
-    Camera3D camera = {0};
-    camera.position = (Vector3){10, 10, 10};
-    camera.target = (Vector3){0, 0, 0};
-    camera.up = (Vector3){0, 1, 0};
-    camera.fovy = 45.0f;
-    camera.projection = CAMERA_PERSPECTIVE;
+    // Player state
+    Vector2 playerPos = { 8.0f, 8.0f };
+    float playerAngle = 0.0f;
+    const float moveSpeed = 3.0f;
+    const float rotSpeed = 2.0f;
+    const float mouseSensitivity = 0.003f;
+
+    // 60 degree field of view.
+    const float FOV = 60.0f * DEG2RAD;
 
     while (!WindowShouldClose()) {
+        float deltaTiem = GetFrameTime();
+
+        // MOUSE LOOK
+        Vector2 mouseDelta = GetMouseDelta();
+        playerAngle -= mouseDelta.x * mouseSensitivity;
+        
+        // Calculate direction vectors
+        Vector2 dirVec = { cosf(playerAngle), sinf(playerAngle) };
 
         // Update loop
-        UpdateCamera(&camera, CAMERA_ORBITAL);
 
         // Draw
-        BeginDrawing();
-        ClearBackground(DARKGRAY);
+        {
+            BeginDrawing();
+            ClearBackground(DARKGRAY);
 
-        // Draw 3D
-        BeginMode3D(camera);
+            // Draw UI
+            DrawFPS(10, 10);
 
-        DrawGrid(10, 1.0f);
-        DrawPlane(Vector3{0, 0, 0}, Vector2{20, 20}, GRAY);
-
-        // DrawModel(model, (Vector3){0, 0, 0}, 1.0f, WHITE);
-
-        DrawCapsule(Vector3{0, 0, 0}, Vector3{0, 2, 0}, 0.5f, 10, 10, RED);
-
-        DrawLine3D(Vector3{0, 0, 0}, Vector3{2, 0, 0}, RED);
-        DrawLine3D(Vector3{0, 0, 0}, Vector3{0, 2, 0}, GREEN);
-        DrawLine3D(Vector3{0, 0, 0}, Vector3{0, 0, 2}, BLUE);
-
-        EndMode3D();
-
-        // Draw UI
-        DrawFPS(10, 10);
-
-        EndDrawing();
+            EndDrawing();
+        }
     }
 
-    UnloadModel(model);
     CloseWindow();
 }
