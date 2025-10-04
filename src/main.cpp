@@ -14,7 +14,7 @@ struct Collectible {
 };
 
 int main() {
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Wolf3D Raycaster");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "LD58 Maze Killer");
     SetTargetFPS(60);
     DisableCursor();
     
