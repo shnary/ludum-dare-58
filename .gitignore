@@ -1,0 +1,38 @@
+# Build directories
+build/
+cmake-build-*/
+.cache/
+
+# Editor support
+compile_commands.json
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.out
+*.app
+
+# IDE
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/settings.json
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Dependencies
+_deps/
+

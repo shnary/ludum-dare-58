@@ -1,0 +1,9 @@
+{
+    "code-runner.executorMap": {
+        "cpp": "cd $dir && cmake --build ../build && ../build/ludum-dare-58"
+    },
+    "code-runner.runInTerminal": true,
+    "code-runner.clearPreviousOutput": true,
+    "code-runner.saveFileBeforeRun": true
+}
+
