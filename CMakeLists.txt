@@ -9,13 +9,21 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(raylib REQUIRED)
 
 # Executable
-add_executable(${PROJECT_NAME}
+add_executable(${PROJECT_NAME} WIN32
     src/main.cpp
     src/game.cpp
     src/collectible.cpp
     src/map.cpp
     src/enemy.cpp
+    src/resources.rc
 )
+
+# Fix entry point for WIN32 executable
+if(WIN32)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        LINK_FLAGS "/ENTRY:mainCRTStartup"
+    )
+endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
 
@@ -40,4 +48,3 @@ elseif(WIN32)
     # Windows libraries
     target_link_libraries(${PROJECT_NAME} PRIVATE winmm gdi32)
 endif()
-
