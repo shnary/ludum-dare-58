@@ -11,6 +11,10 @@ find_package(raylib REQUIRED)
 # Executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
+    src/game.cpp
+    src/collectible.cpp
+    src/map.cpp
+    src/enemy.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
