@@ -4,11 +4,16 @@
 #include <cmath>
 #include <stdlib.h>
 
-std::vector<Collectible> InitCollectibles() {
+std::vector<Collectible> InitCollectibles(int level) {
     std::vector<Collectible> collectibles;
     
     // Generate random collectible positions, ensuring they're not in walls
-    int numCoins = 15 + (rand() % 10); // 15-25 coins
+    int numCoins;
+    if (level == 1) {
+        numCoins = 5; // Exactly 5 coins in level 1 (5 * 10 = 50 gold for door)
+    } else {
+        numCoins = 15 + (rand() % 10); // 15-25 coins in other levels
+    }
     int attempts = 0;
     int maxAttempts = numCoins * 10;
     
@@ -40,8 +45,8 @@ std::vector<Collectible> InitCollectibles() {
         collectibles.push_back({{x, y}, false, 10, COIN});
     }
     
-    // Add 1-2 speed boosts in safe locations
-    int numBoosts = 1 + (rand() % 2);
+    // Add 1-2 speed boosts in safe locations (not in level 1)
+    int numBoosts = (level == 1) ? 0 : 1 + (rand() % 2);
     attempts = 0;
     int boostsAdded = 0;
     
@@ -77,7 +82,7 @@ std::vector<Collectible> InitCollectibles() {
 }
 
 void UpdateCollectibles(std::vector<Collectible>& collectibles, Vector2 playerPos, int& totalGold, 
-                       bool& hasSpeedBoost, float& boostTimer, float goldMultiplier) {
+                       bool& hasSpeedBoost, float& boostTimer, float goldMultiplier, Sound collectSound) {
     for (auto& collectible : collectibles) {
         if (!collectible.collected) {
             float dx = playerPos.x - collectible.pos.x;
@@ -85,6 +90,9 @@ void UpdateCollectibles(std::vector<Collectible>& collectibles, Vector2 playerPo
             float dist = sqrtf(dx * dx + dy * dy);
             if (dist < 0.7f) {
                 collectible.collected = true;
+                if (IsSoundReady(collectSound)) {
+                    PlaySound(collectSound);
+                }
                 if (collectible.type == COIN) {
                     totalGold += (int)(collectible.value * goldMultiplier);
                 } else if (collectible.type == BOOST) {

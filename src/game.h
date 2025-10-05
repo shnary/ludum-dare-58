@@ -6,8 +6,8 @@
 #include "collectible.h"
 #include "enemy.h"
 
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 600;
+const int SCREEN_WIDTH = 1280;
+const int SCREEN_HEIGHT = 720;
 const int MAX_LEVELS = 5;
 
 enum GameMode {
@@ -23,7 +23,7 @@ struct Perk {
     const char* name;
     const char* description;
     int cost;
-    int type; // 0=gold multiplier, 1=speed increase, 2=TBD
+    int type; // 0=gold multiplier, 1=speed increase, 2=boost duration, 3=enemy radar
     float value;
 };
 
@@ -55,6 +55,12 @@ struct GameState {
     bool isBeingAttacked;
     bool shopContinuePressed;
     int menuSelection;
+    bool showEnemyOnMinimap;
+    Sound collectSound;
+    Sound stabSound;
+    Sound purchaseSound;
+    Sound jumpscareSound;
+    Music horrorMusic;
 };
 
 // Initialize game state

@@ -2,6 +2,7 @@
 #define ENEMY_H
 
 #include <raylib.h>
+#include <vector>
 
 struct Enemy {
     Vector2 position;
@@ -10,12 +11,13 @@ struct Enemy {
     float attackRange;
     bool isActive;
     bool isChasing;
-    Vector2 pathTarget; // Current pathfinding target
+    std::vector<Vector2> path; // A* path
+    int currentPathIndex;
     float pathRecalcTimer; // Timer to recalculate path
 };
 
 // Initialize enemy at far position from player
-void InitEnemy(Enemy* enemy, Vector2 playerPos, int mapWidth, int mapHeight);
+void InitEnemy(Enemy* enemy, Vector2 playerPos, int mapWidth, int mapHeight, int level);
 
 // Update enemy AI
 void UpdateEnemy(Enemy* enemy, Vector2 playerPos, float deltaTime);

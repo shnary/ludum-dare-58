@@ -10,6 +10,51 @@
 void InitGame(GameState* game) {
     srand(time(NULL));
     
+    // Only initialize audio and load resources once
+    static bool audioInitialized = false;
+    if (!audioInitialized) {
+        InitAudioDevice();
+        game->collectSound = LoadSound("assets/collect.wav");
+        game->stabSound = LoadSound("assets/stab.wav");
+        game->purchaseSound = LoadSound("assets/purchase.wav");
+        game->jumpscareSound = LoadSound("assets/jumpscare.wav");
+        game->horrorMusic = LoadMusicStream("assets/horror-music.mp3");
+        
+        if (!IsSoundReady(game->collectSound)) {
+            TraceLog(LOG_ERROR, "Failed to load collect.wav");
+        }
+        if (!IsSoundReady(game->stabSound)) {
+            TraceLog(LOG_ERROR, "Failed to load stab.wav");
+        }
+        if (!IsSoundReady(game->purchaseSound)) {
+            TraceLog(LOG_ERROR, "Failed to load purchase.wav");
+        }
+        if (!IsSoundReady(game->jumpscareSound)) {
+            TraceLog(LOG_ERROR, "Failed to load jumpscare.wav");
+        }
+        if (!IsMusicReady(game->horrorMusic)) {
+            TraceLog(LOG_ERROR, "Failed to load horror-music.mp3");
+        }
+        SetSoundVolume(game->collectSound, 0.5f);
+        SetSoundVolume(game->stabSound, 0.7f);
+        SetSoundVolume(game->purchaseSound, 0.6f);
+        SetSoundVolume(game->jumpscareSound, 0.2f);
+        SetMusicVolume(game->horrorMusic, 0.4f);
+        game->horrorMusic.looping = true;
+        
+        audioInitialized = true;
+    }
+    
+    // Stop music if playing before resetting
+    if (IsMusicReady(game->horrorMusic) && IsMusicStreamPlaying(game->horrorMusic)) {
+        StopMusicStream(game->horrorMusic);
+    }
+    
+    // Start music in main menu
+    if (IsMusicReady(game->horrorMusic)) {
+        PlayMusicStream(game->horrorMusic);
+    }
+    
     game->player.angle = 0.0f;
     game->player.mouseSensitivity = 0.003f;
     game->player.hasSpeedBoost = false;
@@ -29,6 +74,7 @@ void InitGame(GameState* game) {
     game->isBeingAttacked = false;
     game->shopContinuePressed = false;
     game->menuSelection = 0;
+    game->showEnemyOnMinimap = false;
 }
 
 void InitLevel(GameState* game, int level) {
@@ -69,9 +115,14 @@ void InitLevel(GameState* game, int level) {
         game->doorCost = 200;
     }
     
-    game->collectibles = InitCollectibles();
-    InitEnemy(&game->enemy, game->player.position, currentMapWidth, currentMapHeight);
+    game->collectibles = InitCollectibles(level);
+    InitEnemy(&game->enemy, game->player.position, currentMapWidth, currentMapHeight, level);
     game->mode = PLAYING;
+    
+    // Start music when level begins (if not already playing)
+    if (IsMusicReady(game->horrorMusic) && !IsMusicStreamPlaying(game->horrorMusic)) {
+        PlayMusicStream(game->horrorMusic);
+    }
 }
 
 void GenerateShopPerks(GameState* game) {
@@ -89,16 +140,31 @@ void GenerateShopPerks(GameState* game) {
     game->shopPerks[1].cost = 20 + (rand() % 15);
     game->shopPerks[1].value = 1.0f;
     
-    // Perk 2: Boost Duration
-    game->shopPerks[2].type = 2;
-    game->shopPerks[2].name = "Long Boost";
-    game->shopPerks[2].description = "Speed boosts last +5s";
-    game->shopPerks[2].cost = 25 + (rand() % 15);
-    game->shopPerks[2].value = 5.0f;
+    // Perk 2: Boost Duration or Enemy Radar
+    if (!game->showEnemyOnMinimap && game->currentLevel >= 3) {
+        // Enemy Radar (only if not already purchased, appears after level 2)
+        game->shopPerks[2].type = 3;
+        game->shopPerks[2].name = "Enemy Radar";
+        game->shopPerks[2].description = "Reveals enemy on minimap";
+        game->shopPerks[2].cost = 40 + (rand() % 20);
+        game->shopPerks[2].value = 1.0f;
+    } else {
+        // Boost Duration
+        game->shopPerks[2].type = 2;
+        game->shopPerks[2].name = "Long Boost";
+        game->shopPerks[2].description = "Speed boosts last +5s";
+        game->shopPerks[2].cost = 25 + (rand() % 15);
+        game->shopPerks[2].value = 5.0f;
+    }
 }
 
 void UpdateGame(GameState* game, float deltaTime) {
     game->animTime += deltaTime;
+    
+    // Update music stream only when playing
+    if (IsMusicReady(game->horrorMusic) && IsMusicStreamPlaying(game->horrorMusic)) {
+        UpdateMusicStream(game->horrorMusic);
+    }
     
     if (game->mode == MAIN_MENU) {
         // Menu navigation
@@ -142,6 +208,10 @@ void UpdateGame(GameState* game, float deltaTime) {
         if (game->loadingTimer >= 1.5f) {  // Faster loading
             if (game->currentLevel > MAX_LEVELS) {
                 game->mode = GAME_WON;
+                // Stop music when game is won
+                if (IsMusicReady(game->horrorMusic)) {
+                    StopMusicStream(game->horrorMusic);
+                }
             } else {
                 game->mode = SHOP;
                 game->loadingTimer = 0.0f;
@@ -163,13 +233,19 @@ void UpdateGame(GameState* game, float deltaTime) {
             if (game->totalGold >= perk->cost) {
                 game->totalGold -= perk->cost;
                 
+                if (IsSoundReady(game->purchaseSound)) {
+                    PlaySound(game->purchaseSound);
+                }
+                
                 if (perk->type == 0) {
                     game->player.goldMultiplier += perk->value;
                 } else if (perk->type == 1) {
                     game->player.baseSpeed += perk->value;
                     game->player.moveSpeed = game->player.baseSpeed;
                 } else if (perk->type == 2) {
-                    // TBD handled in boost
+                    // Boost duration - handled in boost
+                } else if (perk->type == 3) {
+                    game->showEnemyOnMinimap = true;
                 }
                 
                 game->selectedPerk = -1;
@@ -183,7 +259,7 @@ void UpdateGame(GameState* game, float deltaTime) {
             } else {
                 // Second press - continue
                 game->shopContinuePressed = false;
-                InitLevel(game, game->currentLevel + 1);
+                InitLevel(game, game->currentLevel);
             }
         }
         return;
@@ -201,15 +277,44 @@ void UpdateGame(GameState* game, float deltaTime) {
     // Update enemy
     UpdateEnemy(&game->enemy, game->player.position, deltaTime);
     
+    // Play jumpscare sound in loop when enemy is close
+    if (game->enemy.isActive) {
+        float distToEnemy = Vector2Distance(game->enemy.position, game->player.position);
+        float jumpscareDistance = 2.7f; // Start playing when enemy is within 4 units
+        
+        if (distToEnemy < jumpscareDistance) {
+            // Keep sound playing in loop (restart when finished)
+            if (IsSoundReady(game->jumpscareSound) && !IsSoundPlaying(game->jumpscareSound)) {
+                PlaySound(game->jumpscareSound);
+            }
+        } else {
+            // Stop sound when enemy is far
+            if (IsSoundReady(game->jumpscareSound) && IsSoundPlaying(game->jumpscareSound)) {
+                StopSound(game->jumpscareSound);
+            }
+        }
+    }
+    
     // Check if caught by enemy
     if (IsPlayerCaught(&game->enemy, game->player.position)) {
         if (!game->isBeingAttacked) {
             game->isBeingAttacked = true;
             game->stabEffectTimer = 2.0f;  // Stab effect duration
+            if (IsSoundReady(game->stabSound)) {
+                PlaySound(game->stabSound);
+            }
         }
         
         if (game->stabEffectTimer < 1.5f) {  // Die after 0.5s of effect
             game->mode = GAME_LOST;
+            // Stop music when player dies
+            if (IsMusicReady(game->horrorMusic)) {
+                StopMusicStream(game->horrorMusic);
+            }
+            // Stop jumpscare sound
+            if (IsSoundReady(game->jumpscareSound) && IsSoundPlaying(game->jumpscareSound)) {
+                StopSound(game->jumpscareSound);
+            }
             return;
         }
     }
@@ -260,6 +365,14 @@ void UpdateGame(GameState* game, float deltaTime) {
             game->mode = LOADING;
             game->loadingTimer = 0.0f;
             game->currentLevel++;
+            // Stop music when entering door
+            if (IsMusicReady(game->horrorMusic)) {
+                StopMusicStream(game->horrorMusic);
+            }
+            // Stop jumpscare sound
+            if (IsSoundReady(game->jumpscareSound) && IsSoundPlaying(game->jumpscareSound)) {
+                StopSound(game->jumpscareSound);
+            }
             return;
         }
         
@@ -277,6 +390,14 @@ void UpdateGame(GameState* game, float deltaTime) {
             game->mode = LOADING;
             game->loadingTimer = 0.0f;
             game->currentLevel++;
+            // Stop music when entering door
+            if (IsMusicReady(game->horrorMusic)) {
+                StopMusicStream(game->horrorMusic);
+            }
+            // Stop jumpscare sound
+            if (IsSoundReady(game->jumpscareSound) && IsSoundPlaying(game->jumpscareSound)) {
+                StopSound(game->jumpscareSound);
+            }
             return;
         }
         
@@ -287,7 +408,7 @@ void UpdateGame(GameState* game, float deltaTime) {
     
     // Update collectibles
     UpdateCollectibles(game->collectibles, game->player.position, game->totalGold, 
-                      game->player.hasSpeedBoost, game->player.boostTimer, game->player.goldMultiplier);
+                      game->player.hasSpeedBoost, game->player.boostTimer, game->player.goldMultiplier, game->collectSound);
 }
 
 void DrawStabEffect(float intensity) {
@@ -729,12 +850,14 @@ void DrawGame(const GameState* game) {
     
     DrawCollectiblesMinimap(game->collectibles, miniMapOffsetX, miniMapOffsetY, miniMapScale);
     
-    // Enemy on minimap
-    DrawCircle(
-        miniMapOffsetX + (int)(game->enemy.position.x * miniMapScale),
-        miniMapOffsetY + (int)(game->enemy.position.y * miniMapScale),
-        3, Color{150, 0, 0, 255}
-    );
+    // Enemy on minimap (only if radar purchased)
+    if (game->showEnemyOnMinimap && game->enemy.isActive) {
+        DrawCircle(
+            miniMapOffsetX + (int)(game->enemy.position.x * miniMapScale),
+            miniMapOffsetY + (int)(game->enemy.position.y * miniMapScale),
+            3, Color{150, 0, 0, 255}
+        );
+    }
     
     // Player on minimap
     DrawCircle(

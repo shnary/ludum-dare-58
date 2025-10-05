@@ -15,11 +15,11 @@ struct Collectible {
 };
 
 // Initialize collectibles in the world
-std::vector<Collectible> InitCollectibles();
+std::vector<Collectible> InitCollectibles(int level);
 
 // Check and handle player pickup
 void UpdateCollectibles(std::vector<Collectible>& collectibles, Vector2 playerPos, int& totalGold, 
-                       bool& hasSpeedBoost, float& boostTimer, float goldMultiplier);
+                       bool& hasSpeedBoost, float& boostTimer, float goldMultiplier, Sound collectSound);
 
 // Draw collectibles as 3D sprites with depth
 void DrawCollectibles(const std::vector<Collectible>& collectibles, Vector2 playerPos, Vector2 dirVec, 

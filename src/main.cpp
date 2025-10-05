@@ -28,6 +28,16 @@ int main() {
         DrawGame(&game);
     }
     
+    if (IsSoundReady(game.collectSound)) UnloadSound(game.collectSound);
+    if (IsSoundReady(game.stabSound)) UnloadSound(game.stabSound);
+    if (IsSoundReady(game.purchaseSound)) UnloadSound(game.purchaseSound);
+    if (IsMusicReady(game.horrorMusic)) {
+        if (IsMusicStreamPlaying(game.horrorMusic)) {
+            StopMusicStream(game.horrorMusic);
+        }
+        UnloadMusicStream(game.horrorMusic);
+    }
+    CloseAudioDevice();
     CloseWindow();
     return 0;
 }
